@@ -2,20 +2,25 @@ import httpx
 import asyncio
 import random
 import os
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from urllib.parse import urlparse
 
 app = FastAPI()
 
+# ---------------- STATIC FILES ----------------
+# Put your image here: /static/bg.jpg
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ---------------- USER AGENTS ----------------
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15",
 ]
-
-BLOCKED_DOMAINS = []
 
 def get_random_user_agent():
     return random.choice(USER_AGENTS)
@@ -54,17 +59,29 @@ async def root():
         <style>
           body {
             font-family: Arial;
-            background: #111;
+            background-image: url("/static/bg.jpg");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
             color: white;
             text-align: center;
             padding: 60px;
           }
+
+          .box {
+            background: rgba(0,0,0,0.6);
+            padding: 30px;
+            border-radius: 12px;
+            display: inline-block;
+          }
+
           input {
             width: 60%;
             padding: 12px;
             border-radius: 8px;
             border: none;
           }
+
           button {
             padding: 12px 18px;
             margin-left: 10px;
@@ -74,25 +91,29 @@ async def root():
       </head>
       <body>
 
-        <h1>Web Proxy</h1>
+        <div class="box">
+          <h1>Web Proxy</h1>
 
-        <form onsubmit="go(event)">
-          <input id="url" placeholder="Enter URL (google.com or https://example.com)">
-          <button type="submit">Go</button>
-        </form>
+          <form onsubmit="go(event)">
+            <input id="url" placeholder="Enter URL (google.com or https://example.com)">
+            <button type="submit">Go</button>
+          </form>
+
+          <p>Example: google.com</p>
+        </div>
 
         <script>
           function go(e) {
             e.preventDefault();
             let url = document.getElementById("url").value;
+
             if (!url.startsWith("http")) {
               url = "https://" + url;
             }
+
             window.location.href = "/proxy?url=" + encodeURIComponent(url);
           }
         </script>
-
-        <p>Fast proxy service</p>
 
       </body>
     </html>
@@ -153,7 +174,7 @@ async def proxy_post(request: Request, url: str):
         )
 
 
-# ---------------- PORT (Render) ----------------
+# ---------------- RENDER STARTUP ----------------
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
